@@ -103,7 +103,7 @@ const defaultOptions = {
     //允许的文件后缀,和input accept属性差不多
     allowFileExt: null,
     //多选模式下，最大文件数量，为空默认不限制
-    maxLenght: null,
+    maxLength: null,
     //是否自动上传
     autoUpload: true,
     //上传配置，仅当使用默认上传的时候启用

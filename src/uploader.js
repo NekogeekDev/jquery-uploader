@@ -82,9 +82,9 @@ function getFileTypesFromUrl(url) {
     if (!url || url.length === 0) {
         return FILE_TYPE.OTHER
     }
-    if (url.startsWith("blob")) {
+    if (url.startsWith("blob:")) {
         let blob = BLOB_UTILS.getBlobFromUrl(url)
-        if (blob.type.indexOf("image") !== -1) {
+        if (blob && blob.type && blob.type.indexOf("image") !== -1) {
             return FILE_TYPE.IMAGE
         }
         return FILE_TYPE.OTHER
@@ -96,6 +96,15 @@ function getFileTypesFromUrl(url) {
         }
         return FILE_TYPE.OTHER
     }
+}
+
+function escapeHtmlAttr(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;")
 }
 
 /**
@@ -203,7 +212,8 @@ export default class Uploader {
      * @return {*|jQuery|HTMLElement}
      */
     createFileCardEle(id, url, type) {
-        let filePreview = type === FILE_TYPE.IMAGE ? `<img alt="preview" class="files_img" src="${url}"/>` : `<div class="file_other"></div>`
+        const safeUrl = escapeHtmlAttr(url)
+        let filePreview = type === FILE_TYPE.IMAGE ? `<img alt="preview" class="files_img" src="${safeUrl}"/>` : `<div class="file_other"></div>`
 
         //判断当前是否支持预览
         let viewerHtml = "";
@@ -308,6 +318,11 @@ export default class Uploader {
      * 清除所有文件
      */
     clean() {
+        this.files.forEach(file => {
+            if (file.url && file.url.startsWith("blob:")) {
+                BLOB_UTILS.revokeBlobUrl(file.url)
+            }
+        })
         this.files = []
         this.refreshPreviewFileList()
         this.refreshValue()
@@ -571,7 +586,6 @@ export default class Uploader {
     handleFileDelete(event) {
         let $deleteCard = $(event.target).parents(".jquery-uploader-card")
         let id = $deleteCard[0].id
-        $deleteCard.remove()
         let index = -1;
         this.files.forEach((file, i) => {
                 if (file.id === id) {
@@ -579,6 +593,11 @@ export default class Uploader {
                 }
             }
         )
+        if (index === -1) {
+            console.error(`删除错误 id ${id} 不存在`)
+            return
+        }
+        $deleteCard.remove()
         let removedFile = this.files.splice(index, 1)
         if (removedFile[0].url) {
             BLOB_UTILS.revokeBlobUrl(removedFile[0].url)
@@ -602,7 +621,7 @@ export default class Uploader {
                     uploaderFile = file
                 }
                 if (file.type === FILE_TYPE.IMAGE) {
-                    $imageViewContainer.append($(`<img id="img-${file.id}" src="${file.url}" alt="${file.name}"/>`))
+                    $imageViewContainer.append($(`<img id="img-${escapeHtmlAttr(file.id)}" src="${escapeHtmlAttr(file.url)}" alt="${escapeHtmlAttr(file.name)}"/>`))
                 }
             }
         )
@@ -705,7 +724,7 @@ Uploader.fileStatus = {
     //文件上传失败
     error: "error",
     //文件是预览文件
-    initial: " initial"
+    initial: "initial"
 }
 
 
